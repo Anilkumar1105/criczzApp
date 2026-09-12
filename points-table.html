@@ -26,14 +26,34 @@
 </div>
 
 <div class="container-app py-3">
-  <div class="card-app">
-    <div class="table-responsive">
-      <table class="table points-table mb-0">
-        <thead>
-          <tr><th>#</th><th>Team</th><th class="text-end">P</th><th class="text-end">W</th><th class="text-end">L</th><th class="text-end">NR</th><th class="text-end">Pts</th><th class="text-end">NRR</th></tr>
-        </thead>
-        <tbody id="rows"></tbody>
-      </table>
+  <ul class="nav nav-tabs mb-3" id="pointsTabs">
+    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabStandings">Points Table</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabStats">Top Stats</button></li>
+  </ul>
+
+  <div class="tab-content">
+    <div class="tab-pane fade show active" id="tabStandings">
+      <div class="card-app">
+        <div class="table-responsive">
+          <table class="table points-table mb-0">
+            <thead>
+              <tr><th>#</th><th>Team</th><th class="text-end">P</th><th class="text-end">W</th><th class="text-end">L</th><th class="text-end">NR</th><th class="text-end">Pts</th><th class="text-end">NRR</th></tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="tabStats">
+      <div class="section-heading mt-0">🏏 Most Runs</div>
+      <div class="card-app" id="statRuns"></div>
+      <div class="section-heading">🎯 Most Wickets</div>
+      <div class="card-app" id="statWickets"></div>
+      <div class="section-heading">4️⃣ Most Fours</div>
+      <div class="card-app" id="statFours"></div>
+      <div class="section-heading">6️⃣ Most Sixes</div>
+      <div class="card-app" id="statSixes"></div>
     </div>
   </div>
 </div>
@@ -42,8 +62,8 @@
 
 <script type="module">
   import { requireRole } from "./auth.js";
-  import { renderBottomNav, renderAdminNav, $ } from "./app.js";
-  import { computeStandings } from "./points.js";
+  import { renderBottomNav, renderAdminNav, $, initials } from "./app.js";
+  import { computeStandings, computePlayerStats } from "./points.js";
   import { teamLogoImg } from "./teams.js";
   import { getDefaultTournament } from "./tournament.js";
 
@@ -75,6 +95,36 @@
         <td class="text-end">${r.nrr >= 0 ? "+" : ""}${r.nrr.toFixed(3)}</td>
       </tr>`).join("");
   }
+
+  function playerRow(p, valueLabel, value) {
+    const initialsText = initials(p.name);
+    const avatar = p.photoUrl
+      ? `<img src="${p.photoUrl}" class="team-logo team-logo-sm" alt="${p.name}" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'team-logo team-logo-sm avatar-fallback d-flex',textContent:'${initialsText}'}))">`
+      : `<div class="team-logo team-logo-sm avatar-fallback d-flex">${initialsText}</div>`;
+    return `<div class="list-row">
+      ${avatar}
+      <div class="flex-grow-1">
+        <div class="fw-semibold">${p.name}</div>
+        <div class="small text-muted">${p.teamShortName || ""}</div>
+      </div>
+      <div class="fw-bold display-font">${value}</div>
+    </div>`;
+  }
+
+  function renderLeaderboard(mountId, list, key, formatter) {
+    const mount = $(mountId);
+    if (!list.length) {
+      mount.innerHTML = `<p class="text-muted small mb-0 py-2">No data yet</p>`;
+      return;
+    }
+    mount.innerHTML = list.map((p) => playerRow(p, key, formatter ? formatter(p) : p[key])).join("");
+  }
+
+  const stats = await computePlayerStats(tournament?.id);
+  renderLeaderboard("#statRuns", stats.topRuns, "runs", (p) => `${p.runs} <span class="small text-muted fw-normal">(${p.balls}b)</span>`);
+  renderLeaderboard("#statWickets", stats.topWickets, "wickets");
+  renderLeaderboard("#statFours", stats.topFours, "fours");
+  renderLeaderboard("#statSixes", stats.topSixes, "sixes");
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>

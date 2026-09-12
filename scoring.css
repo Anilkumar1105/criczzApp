@@ -83,6 +83,12 @@
   padding: 13px 0;
   color: var(--color-pitch);
 }
+.pad-btn.extra.active {
+  background: var(--color-pitch);
+  color: #fff;
+  border-color: var(--color-pitch);
+}
+.pad-btn:disabled { opacity: 0.4; }
 
 .pad-btn.wicket {
   width: 100%;

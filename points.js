@@ -4,6 +4,7 @@
 
 import { listMatches } from "./matches.js";
 import { listTeams } from "./teams.js";
+import { getPlayersByIds } from "./players.js";
 
 const WIN_POINTS = 2;
 const TIE_POINTS = 1;
@@ -71,4 +72,73 @@ export async function computeStandings(tournamentId) {
 
   list.sort((a, b) => b.points - a.points || b.nrr - a.nrr);
   return list;
+}
+
+/**
+ * Aggregate batting/bowling figures across every match that has started
+ * (live or completed) in the tournament, for "Most Runs / Wickets / Fours
+ * / Sixes" leaderboards.
+ */
+export async function computePlayerStats(tournamentId) {
+  const [teams, matches] = await Promise.all([listTeams(tournamentId), listMatches(tournamentId)]);
+  const teamMap = Object.fromEntries(teams.map((t) => [t.id, t]));
+  const agg = {};
+  const ensure = (id) => {
+    if (!agg[id]) agg[id] = { runs: 0, balls: 0, fours: 0, sixes: 0, wickets: 0, matchIds: new Set() };
+    return agg[id];
+  };
+
+  matches
+    .filter((m) => m.innings1 || m.innings2)
+    .forEach((m) => {
+      [m.innings1, m.innings2].forEach((inn) => {
+        if (!inn) return;
+        Object.entries(inn.batsmen || {}).forEach(([pid, b]) => {
+          const s = ensure(pid);
+          s.runs += b.runs || 0;
+          s.balls += b.balls || 0;
+          s.fours += b.fours || 0;
+          s.sixes += b.sixes || 0;
+          s.teamId = s.teamId || inn.battingTeamId;
+          s.matchIds.add(m.id);
+        });
+        Object.entries(inn.bowlers || {}).forEach(([pid, bw]) => {
+          const s = ensure(pid);
+          s.wickets += bw.wickets || 0;
+          s.teamId = s.teamId || inn.bowlingTeamId;
+          s.matchIds.add(m.id);
+        });
+      });
+    });
+
+  const playerIds = Object.keys(agg);
+  const playersMap = await getPlayersByIds(playerIds);
+  const rows = playerIds.map((id) => {
+    const p = playersMap[id];
+    const a = agg[id];
+    const teamId = p?.teamId || a.teamId;
+    return {
+      playerId: id,
+      name: p?.name || "Unknown",
+      photoUrl: p?.photoUrl || "",
+      teamId,
+      teamShortName: teamMap[teamId]?.shortName || teamMap[teamId]?.name || "",
+      matches: a.matchIds.size,
+      runs: a.runs,
+      balls: a.balls,
+      fours: a.fours,
+      sixes: a.sixes,
+      wickets: a.wickets,
+      strikeRate: a.balls > 0 ? ((a.runs / a.balls) * 100).toFixed(2) : "0.00",
+    };
+  });
+
+  const topN = (key, n = 10) => [...rows].sort((x, y) => y[key] - x[key]).filter((r) => r[key] > 0).slice(0, n);
+
+  return {
+    topRuns: topN("runs"),
+    topWickets: topN("wickets"),
+    topFours: topN("fours"),
+    topSixes: topN("sixes"),
+  };
 }
