@@ -148,15 +148,16 @@
     let adminBtns = "";
     if (isAdmin) {
       if (m.status === "UPCOMING") {
-        adminBtns = `<button class="btn btn-sm btn-pitch xi-btn" data-id="${m.id}">Select Playing XI</button>
-                     <button class="btn btn-sm btn-light edit-btn" data-id="${m.id}"><i class="bi bi-pencil"></i></button>`;
+        adminBtns = `<button class="btn btn-sm btn-pitch xi-btn" data-id="${m.id}">Select Playing XI</button>`;
       } else if (m.status === "PLAYING_XI") {
         adminBtns = `${!m.playingXIAnnounced ? `<button class="btn btn-sm btn-gold announce-btn" data-id="${m.id}">Announce XI</button>` : ""}
                      <button class="btn btn-sm btn-ball start-btn" data-id="${m.id}">Start Match</button>
-                     <button class="btn btn-sm btn-light xi-btn" data-id="${m.id}"><i class="bi bi-pencil"></i></button>`;
+                     <button class="btn btn-sm btn-light xi-btn" data-id="${m.id}">Edit XI</button>`;
       } else if (m.status === "LIVE" || m.status === "INNINGS_BREAK") {
         adminBtns = `<a class="btn btn-sm btn-ball" href="scoring.html?id=${m.id}"><i class="bi bi-broadcast"></i> Score</a>`;
       }
+      // Edit/Delete must always be reachable, whatever the match's status.
+      adminBtns += `<button class="btn btn-sm btn-outline-secondary edit-btn" data-id="${m.id}" title="Edit or delete match"><i class="bi bi-pencil"></i></button>`;
     }
     return `<div class="d-flex gap-2 flex-wrap mt-2">
       <a class="btn btn-sm btn-outline-secondary" href="${viewLink}">${viewLabel}</a>

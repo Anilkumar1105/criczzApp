@@ -226,7 +226,20 @@ export async function recomputeAndSave(matchId, inningsNumber, opener) {
   const targetReached = inningsNumber === 2 && match.innings1 && state.runs >= (match.innings1.runs + 1);
   const inningsComplete = wicketsAllOut || oversDone || targetReached;
 
-  const update = { [inningsKey]: { ...state, complete: inningsComplete } };
+  // Preserve battingTeamId/bowlingTeamId (and anything else not part of the
+  // replayed state) — computeInningsState only returns score/figures, so a
+  // plain overwrite here would silently wipe those fields after the very
+  // first ball of the innings.
+  const existingInnings = match[inningsKey] || {};
+  const update = {
+    [inningsKey]: {
+      ...existingInnings,
+      ...state,
+      battingTeamId: existingInnings.battingTeamId,
+      bowlingTeamId: existingInnings.bowlingTeamId,
+      complete: inningsComplete,
+    },
+  };
 
   if (inningsComplete && inningsNumber === 1) {
     update.status = "INNINGS_BREAK";
