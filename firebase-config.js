@@ -23,12 +23,13 @@ import {
 
 // ---------- PASTE YOUR CONFIG HERE ----------
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID",
+  apiKey: "AIzaSyCZZP5VxjyLmIy3fIXiP_sCrMR1jIF6LTI",
+  authDomain: "cricketapp-c1273.firebaseapp.com",
+  projectId: "cricketapp-c1273",
+  storageBucket: "cricketapp-c1273.firebasestorage.app",
+  messagingSenderId: "835964581502",
+  appId: "1:835964581502:web:690293aa6a3e0bd0824a2f",
+  measurementId: "G-1930RJM5KK"
 };
 // ---------------------------------------------
 
