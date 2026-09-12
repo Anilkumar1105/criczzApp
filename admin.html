@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Admin Dashboard — Cricket Live</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+<link href="style.css" rel="stylesheet">
+<link href="admin.css" rel="stylesheet">
+</head>
+<body class="no-bottom-nav" data-page="admin">
+
+<div class="app-topbar">
+  <div class="d-flex align-items-center gap-2">
+    <button class="btn btn-sm btn-link text-white" data-bs-toggle="offcanvas" data-bs-target="#adminOffcanvas"><i class="bi bi-list fs-4"></i></button>
+    <div class="brand">🏏 <div>Admin Dashboard<small id="topbarUser"></small></div></div>
+  </div>
+  <button class="btn btn-sm btn-link text-white" id="logoutBtn"><i class="bi bi-box-arrow-right fs-5"></i></button>
+</div>
+
+<div class="offcanvas offcanvas-start" id="adminOffcanvas">
+  <div class="offcanvas-header"><h5>Admin Menu</h5><button class="btn-close" data-bs-dismiss="offcanvas"></button></div>
+  <div class="offcanvas-body d-flex flex-column gap-1" id="adminNavList"></div>
+</div>
+
+<div class="container-app py-3">
+  <div class="stat-grid mb-3">
+    <div class="stat-card"><div class="num" id="statTournaments">–</div><div class="label">Tournaments</div></div>
+    <div class="stat-card"><div class="num" id="statTeams">–</div><div class="label">Teams</div></div>
+    <div class="stat-card"><div class="num" id="statPlayers">–</div><div class="label">Players</div></div>
+    <div class="stat-card"><div class="num" id="statUpcoming">–</div><div class="label">Upcoming</div></div>
+    <div class="stat-card"><div class="num" id="statLive">–</div><div class="label">Live</div></div>
+    <div class="stat-card"><div class="num" id="statCompleted">–</div><div class="label">Completed</div></div>
+  </div>
+
+  <div class="section-heading">Quick actions</div>
+  <div class="quick-actions mb-3">
+    <a href="tournament.html" class="btn btn-sm btn-pitch"><i class="bi bi-plus-lg"></i> Tournament</a>
+    <a href="teams.html" class="btn btn-sm btn-pitch"><i class="bi bi-plus-lg"></i> Team</a>
+    <a href="players.html" class="btn btn-sm btn-pitch"><i class="bi bi-plus-lg"></i> Player</a>
+    <a href="matches.html" class="btn btn-sm btn-pitch"><i class="bi bi-plus-lg"></i> Match</a>
+    <a href="matches.html" class="btn btn-sm btn-ball"><i class="bi bi-broadcast"></i> Live Scoring</a>
+  </div>
+
+  <div class="section-heading">Live now</div>
+  <div id="liveList"></div>
+</div>
+
+<script type="module">
+  import { requireRole, logoutUser } from "./auth.js";
+  import { renderAdminNav, renderTopbar, $, statusBadge, ballsToOvers } from "./app.js";
+  import { listTournaments } from "./tournament.js";
+  import { listTeams, getTeam, teamLogoImg } from "./teams.js";
+  import { listPlayers } from "./players.js";
+  import { listMatches } from "./matches.js";
+
+  const { profile } = await requireRole("admin");
+  renderAdminNav("dashboard");
+  renderTopbar("Admin Dashboard", profile);
+  $("#logoutBtn").addEventListener("click", logoutUser);
+
+  const [tournaments, teams, players, matches] = await Promise.all([
+    listTournaments(), listTeams(), listPlayers(), listMatches(),
+  ]);
+
+  $("#statTournaments").textContent = tournaments.length;
+  $("#statTeams").textContent = teams.length;
+  $("#statPlayers").textContent = players.length;
+  $("#statUpcoming").textContent = matches.filter((m) => m.status === "UPCOMING" || m.status === "PLAYING_XI").length;
+  $("#statLive").textContent = matches.filter((m) => m.status === "LIVE" || m.status === "INNINGS_BREAK").length;
+  $("#statCompleted").textContent = matches.filter((m) => m.status === "COMPLETED").length;
+
+  const live = matches.filter((m) => m.status === "LIVE" || m.status === "INNINGS_BREAK");
+  if (!live.length) {
+    $("#liveList").innerHTML = `<div class="empty-state"><i class="bi bi-broadcast"></i>No live matches right now</div>`;
+  } else {
+    const rows = await Promise.all(live.map(async (m) => {
+      const teamA = await getTeam(m.teamAId), teamB = await getTeam(m.teamBId);
+      const innings = m.currentInnings === 2 ? m.innings2 : m.innings1;
+      return `<a href="scoring.html?id=${m.id}" class="card-app mb-2 d-flex flex-row justify-content-between align-items-center text-decoration-none">
+        <div>
+          <div class="d-flex align-items-center gap-2 mb-1">${teamLogoImg(teamA, "team-logo-sm")}<span class="small fw-semibold" style="color:var(--color-ink)">${teamA?.name} vs ${teamB?.name}</span></div>
+          <div class="small text-muted">${innings ? `${innings.runs}/${innings.wickets} (${ballsToOvers(innings.legalBalls)} ov)` : ""}</div>
+        </div>
+        ${statusBadge(m.status)}
+      </a>`;
+    }));
+    $("#liveList").innerHTML = rows.join("");
+  }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

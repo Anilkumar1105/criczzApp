@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Scorecard — Cricket Live</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+<link href="style.css" rel="stylesheet">
+</head>
+<body data-page="matches">
+
+<div class="app-topbar">
+  <div class="d-flex align-items-center gap-2">
+    <a href="javascript:history.back()" class="text-white"><i class="bi bi-arrow-left fs-5"></i></a>
+    <div class="brand">🏏 <div>Scorecard</div></div>
+  </div>
+</div>
+
+<div class="container-app py-3" id="content">
+  <div class="skel" style="height:200px;"></div>
+</div>
+
+<div id="bottomNav"></div>
+
+<script type="module">
+  import { requireRole } from "./auth.js";
+  import { renderBottomNav, $, ballsToOvers } from "./app.js";
+  import { listenMatch, getMatch } from "./matches.js";
+  import { getTeam } from "./teams.js";
+  import { listPlayers } from "./players.js";
+  import { renderBattingTable, renderBowlingTable, renderExtras, renderFallOfWickets, renderInningsTotal } from "./scorecard.js";
+
+  const { profile } = await requireRole("any");
+  if (profile.role !== "admin") renderBottomNav("points");
+
+  const matchId = new URLSearchParams(location.search).get("id");
+  if (!matchId) { $("#content").innerHTML = "<p>No match specified.</p>"; throw new Error("no id"); }
+
+  const match = await getMatch(matchId);
+  const teamA = await getTeam(match.teamAId);
+  const teamB = await getTeam(match.teamBId);
+  const playersA = await listPlayers(match.teamAId);
+  const playersB = await listPlayers(match.teamBId);
+  const playersMap = {};
+  [...playersA, ...playersB].forEach((p) => playersMap[p.id] = p);
+
+  function inningsBlock(innings, label) {
+    if (!innings) return `<div class="card-app mb-3 text-center text-muted small">${label} hasn't started yet.</div>`;
+    const teamName = innings.battingTeamId === match.teamAId ? teamA?.name : teamB?.name;
+    return `<div class="card-app mb-3">
+      ${renderInningsTotal(innings, teamName)}
+      ${renderBattingTable(innings, playersMap)}
+      ${renderExtras(innings)}
+      ${renderFallOfWickets(innings, playersMap)}
+      <div class="mt-3">${renderBowlingTable(innings, playersMap)}</div>
+    </div>`;
+  }
+
+  function render() {
+    let html = `<div class="text-center mb-3">
+      <div class="fw-semibold">${teamA?.name} vs ${teamB?.name}</div>
+      <div class="small text-muted">${match.venue || ""}</div>
+      ${match.result ? `<div class="badge text-bg-success mt-2">${match.result}</div>` : ""}
+    </div>`;
+    html += inningsBlock(match.innings1, "1st innings");
+    html += inningsBlock(match.innings2, "2nd innings");
+    $("#content").innerHTML = html;
+  }
+
+  render();
+  listenMatch(matchId, (m) => {
+    if (!m) return;
+    Object.assign(match, m);
+    render();
+  });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

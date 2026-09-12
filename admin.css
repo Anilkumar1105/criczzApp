@@ -1,0 +1,103 @@
+/* ============================================================
+   ADMIN.CSS — admin dashboard & CRUD screens
+   ============================================================ */
+
+.admin-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border-radius: var(--radius-sm);
+  color: var(--color-ink);
+  font-weight: 500;
+  font-size: 0.92rem;
+}
+.admin-nav-item i { width: 20px; text-align: center; color: var(--color-muted); }
+.admin-nav-item.active {
+  background: var(--color-pitch);
+  color: #fff;
+}
+.admin-nav-item.active i { color: #fff; }
+
+.stat-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.stat-card .num {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--color-pitch);
+}
+.stat-card .label {
+  font-size: 0.72rem;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+@media (max-width: 420px) {
+  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+.quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.form-label { font-weight: 600; font-size: 0.85rem; }
+.form-section-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin: 18px 0 8px;
+  color: var(--color-pitch);
+}
+
+.admin-row-actions { display: flex; gap: 6px; }
+.admin-row-actions .btn { padding: 4px 9px; font-size: 0.78rem; }
+
+.xi-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+.xi-picker-item.selected {
+  border-color: var(--color-pitch);
+  background: #EAF4EE;
+}
+.xi-picker-item .order-num {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--color-pitch);
+  color: #fff;
+  font-size: 0.7rem;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.xi-picker-item.selected .order-num { display: flex; }
+
+.countdown-box {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}

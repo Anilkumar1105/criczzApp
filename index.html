@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cricket Live — Home</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+<link href="style.css" rel="stylesheet">
+</head>
+<body data-page="home">
+
+<div class="app-topbar">
+  <div class="brand">🏏 <div><span id="tournamentName">Ganesh Premier League</span><small id="tournamentVenue"></small></div></div>
+  <a href="settings.html" title="Menu"><i class="bi bi-person-circle fs-5"></i></a>
+</div>
+
+<div class="container-app py-3">
+
+  <div id="liveSection"></div>
+
+  <div class="section-heading">Upcoming matches <a href="matches.html" class="small">See all</a></div>
+  <div id="upcomingList"><div class="skel" style="height:70px;"></div></div>
+
+  <div class="section-heading">Teams <a href="teams.html" class="small">See all</a></div>
+  <div class="h-scroll" id="teamsStrip"></div>
+
+  <div class="section-heading">Points table</div>
+  <a href="points-table.html" class="card-app d-flex align-items-center justify-content-between text-decoration-none">
+    <span class="fw-semibold" style="color:var(--color-ink)"><i class="bi bi-trophy-fill text-warning"></i> View full points table</span>
+    <i class="bi bi-chevron-right" style="color:var(--color-muted)"></i>
+  </a>
+
+</div>
+
+<div id="bottomNav"></div>
+
+<script type="module">
+  import { requireRole } from "./auth.js";
+  import { renderBottomNav, $, statusBadge, ballsToOvers } from "./app.js";
+  import { listenAllMatches } from "./matches.js";
+  import { getTeam, listTeams, teamLogoImg } from "./teams.js";
+  import { getDefaultTournament } from "./tournament.js";
+
+  renderBottomNav("home");
+  await requireRole("any");
+
+  const tournament = await getDefaultTournament();
+  if (tournament) {
+    $("#tournamentName").textContent = tournament.name;
+    $("#tournamentVenue").textContent = tournament.venue || "";
+  }
+
+  const teamCache = {};
+  async function team(id) {
+    if (!id) return null;
+    if (!teamCache[id]) teamCache[id] = await getTeam(id);
+    return teamCache[id];
+  }
+
+  function renderLiveCard(match, teamA, teamB) {
+    const innings = match.currentInnings === 2 ? match.innings2 : match.innings1;
+    const battingTeam = innings?.battingTeamId === match.teamAId ? teamA : teamB;
+    const bowlingTeam = battingTeam?.id === teamA?.id ? teamB : teamA;
+    return `
+    <a href="live-score.html?id=${match.id}" class="text-decoration-none">
+    <div class="live-card mb-3">
+      <span class="live-pill"><span class="live-dot"></span> LIVE</span>
+      <div class="live-teamrow">
+        <span class="team-name text-white">${battingTeam?.name || "Team"}</span>
+        <span></span>
+      </div>
+      <div class="d-flex justify-content-between align-items-baseline">
+        <span class="score">${innings?.runs ?? 0}/${innings?.wickets ?? 0}</span>
+        <span class="overs">${ballsToOvers(innings?.legalBalls)} OVERS</span>
+      </div>
+      <div class="live-vs">VS</div>
+      <div class="live-teamrow">
+        <span class="team-name text-white-50">${bowlingTeam?.name || "Team"}</span>
+      </div>
+      <button class="btn btn-gold btn-sm w-100 mt-3 fw-semibold">View live score</button>
+    </div>
+    </a>`;
+  }
+
+  function renderUpcomingRow(match, teamA, teamB) {
+    return `<a href="matches.html" class="text-decoration-none">
+      <div class="card-app mb-2">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <span class="small text-muted">Match ${match.matchNumber ?? ""}</span>
+          ${statusBadge(match.status)}
+        </div>
+        <div class="d-flex align-items-center justify-content-between">
+          <div class="d-flex align-items-center gap-2">${teamLogoImg(teamA, "team-logo-sm")}<span class="small fw-semibold">${teamA?.name || "Team A"}</span></div>
+          <span class="small text-muted">vs</span>
+          <div class="d-flex align-items-center gap-2"><span class="small fw-semibold">${teamB?.name || "Team B"}</span>${teamLogoImg(teamB, "team-logo-sm")}</div>
+        </div>
+        <div class="small text-muted mt-1"><i class="bi bi-clock"></i> ${match.date || ""} ${match.time || ""}</div>
+      </div>
+    </a>`;
+  }
+
+  listenAllMatches(async (matches) => {
+    const live = matches.filter((m) => m.status === "LIVE" || m.status === "INNINGS_BREAK");
+    const upcoming = matches.filter((m) => m.status === "UPCOMING" || m.status === "PLAYING_XI").slice(0, 4);
+
+    if (live.length) {
+      const cards = await Promise.all(live.map(async (m) => renderLiveCard(m, await team(m.teamAId), await team(m.teamBId))));
+      $("#liveSection").innerHTML = cards.join("");
+    } else {
+      $("#liveSection").innerHTML = "";
+    }
+
+    if (upcoming.length) {
+      const rows = await Promise.all(upcoming.map(async (m) => renderUpcomingRow(m, await team(m.teamAId), await team(m.teamBId))));
+      $("#upcomingList").innerHTML = rows.join("");
+    } else {
+      $("#upcomingList").innerHTML = `<div class="empty-state py-3"><i class="bi bi-calendar2-x"></i>No upcoming matches yet</div>`;
+    }
+  });
+
+  listTeams(tournament?.id).then((teams) => {
+    if (!teams.length) {
+      $("#teamsStrip").innerHTML = `<div class="empty-state py-2 w-100"><i class="bi bi-people"></i>No teams added yet</div>`;
+      return;
+    }
+    $("#teamsStrip").innerHTML = teams.map((t) => `
+      <a href="teams.html" class="team-chip text-decoration-none">
+        ${teamLogoImg(t, "team-logo-lg")}
+        <span>${t.shortName || t.name}</span>
+      </a>`).join("");
+  });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

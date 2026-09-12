@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Live Scoring — Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+<link href="style.css" rel="stylesheet">
+<link href="scoring.css" rel="stylesheet">
+</head>
+<body class="no-bottom-nav" data-page="scoring">
+
+<div class="score-header" id="scoreHeader">
+  <div class="d-flex justify-content-between align-items-center mb-1">
+    <a href="matches.html" class="text-white-50"><i class="bi bi-arrow-left"></i> Matches</a>
+    <span class="small text-white-50" id="matchLabel"></span>
+  </div>
+  <div class="team-line">
+    <span class="team-name" id="battingTeamName">Team</span>
+  </div>
+  <div class="d-flex justify-content-between align-items-baseline">
+    <span class="big-score" id="bigScore">0/0</span>
+    <span class="overs-line" id="oversLine">0.0 OVERS</span>
+  </div>
+  <div class="crr-line" id="crrLine"></div>
+  <div class="batsmen-mini" id="batsmenMini"></div>
+  <div class="bowler-mini" id="bowlerMini"></div>
+</div>
+
+<div class="pad-wrap container-app" id="padWrap">
+  <div id="overPendingBanner" class="alert alert-warning py-2 px-3 small d-none d-flex justify-content-between align-items-center">
+    <span>New over — pick the bowler</span>
+    <button class="btn btn-sm btn-pitch" data-bs-toggle="modal" data-bs-target="#bowlerModal">Select</button>
+  </div>
+
+  <div class="pad-grid">
+    <button class="pad-btn" data-run="0">0</button>
+    <button class="pad-btn" data-run="1">1</button>
+    <button class="pad-btn" data-run="2">2</button>
+    <button class="pad-btn" data-run="3">3</button>
+    <button class="pad-btn boundary" data-run="4">4</button>
+    <button class="pad-btn boundary six" data-run="6">6</button>
+  </div>
+
+  <div class="extra-grid">
+    <button class="pad-btn extra" id="wideBtn">WIDE</button>
+    <button class="pad-btn extra" id="noBallBtn">NO BALL</button>
+    <button class="pad-btn extra" id="byeBtn">BYE</button>
+    <button class="pad-btn extra" id="legByeBtn">LEG BYE</button>
+  </div>
+
+  <button class="pad-btn wicket" data-bs-toggle="modal" data-bs-target="#wicketModal">WICKET</button>
+
+  <div class="util-row">
+    <button class="pad-btn btn-outline-secondary" id="undoBtn"><i class="bi bi-arrow-counterclockwise"></i> UNDO</button>
+    <button class="pad-btn btn-outline-secondary" id="editBallBtn" data-bs-toggle="modal" data-bs-target="#editModal"><i class="bi bi-pencil-square"></i> EDIT BALL</button>
+  </div>
+
+  <div class="section-heading">Last balls</div>
+  <div class="last-balls" id="lastBalls"></div>
+
+  <div class="mt-3 d-flex gap-2">
+    <button class="btn btn-outline-danger btn-sm w-100" id="endInningsBtn">End Innings</button>
+  </div>
+
+  <div id="inningsBreakPanel" class="card-app mt-3 d-none">
+    <h5>Innings Break</h5>
+    <p class="mb-2" id="targetText"></p>
+    <div class="mb-2"><label class="form-label">Opening striker</label><select class="form-select" id="i2Striker"></select></div>
+    <div class="mb-2"><label class="form-label">Opening non-striker</label><select class="form-select" id="i2NonStriker"></select></div>
+    <div class="mb-2"><label class="form-label">Opening bowler</label><select class="form-select" id="i2Bowler"></select></div>
+    <button class="btn btn-ball w-100" id="startInnings2Btn">Start 2nd Innings</button>
+  </div>
+
+  <div id="completePanel" class="card-app mt-3 d-none text-center">
+    <h5 id="resultText"></h5>
+    <a href="scorecard.html" id="viewScorecardLink" class="btn btn-pitch mt-2">View Full Scorecard</a>
+  </div>
+</div>
+
+<!-- Wicket modal -->
+<div class="modal fade" id="wicketModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">Wicket</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <div class="mb-2">
+          <label class="form-label">Wicket type</label>
+          <select class="form-select" id="wicketType">
+            <option>Bowled</option><option>Caught</option><option>LBW</option><option>Run Out</option><option>Stumped</option><option>Hit Wicket</option><option>Retired</option>
+          </select>
+        </div>
+        <div class="mb-2" id="runsCompletedWrap" style="display:none">
+          <label class="form-label">Runs completed</label>
+          <input type="number" class="form-control" id="runsCompleted" value="0" min="0" max="6">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Dismissed player</label>
+          <select class="form-select" id="dismissedPlayer"></select>
+        </div>
+        <div class="mb-2" id="replacementWrap">
+          <label class="form-label">Replacement batsman</label>
+          <select class="form-select" id="replacementPlayer"></select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-ball" id="confirmWicketBtn">Confirm Wicket</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bowler select modal -->
+<div class="modal fade" id="bowlerModal" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">Select Bowler</h5></div>
+      <div class="modal-body">
+        <select class="form-select" id="newBowlerSelect"></select>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-pitch w-100" id="confirmBowlerBtn">Confirm</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit ball modal -->
+<div class="modal fade" id="editModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">Edit Recent Balls</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body" id="editBallList"></div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { requireRole } from "./auth.js";
+  import { $, toast, confirmAction, ballsToOvers } from "./app.js";
+  import { getMatch, listenMatch } from "./matches.js";
+  import { getTeam } from "./teams.js";
+  import { listPlayers } from "./players.js";
+  import {
+    recordBall, undoLastBall, editBall, getAllBalls, startInnings, forceEndInnings, MAX_WICKETS,
+  } from "./scoring.js";
+
+  await requireRole("admin");
+  const matchId = new URLSearchParams(location.search).get("id");
+  if (!matchId) { document.body.innerHTML = "<p class='p-4'>No match specified.</p>"; throw new Error("no id"); }
+
+  let match, teamA, teamB, playersA, playersB, playersMap = {};
+  let bowlerModal = new bootstrap.Modal("#bowlerModal");
+  let wicketModal = new bootstrap.Modal("#wicketModal");
+  let awaitingBowler = false;
+  let lastRenderedLegalBalls = -1;
+
+  match = await getMatch(matchId);
+  teamA = await getTeam(match.teamAId);
+  teamB = await getTeam(match.teamBId);
+  playersA = await listPlayers(match.teamAId);
+  playersB = await listPlayers(match.teamBId);
+  [...playersA, ...playersB].forEach((p) => playersMap[p.id] = p);
+
+  function currentInningsKey() { return `innings${match.currentInnings}`; }
+  function currentInnings() { return match[currentInningsKey()]; }
+  function battingXi() {
+    const innings = currentInnings();
+    const teamId = innings?.battingTeamId;
+    return teamId === match.teamAId ? playersA : playersB;
+  }
+  function bowlingXi() {
+    const innings = currentInnings();
+    const teamId = innings?.bowlingTeamId;
+    return teamId === match.teamAId ? playersA : playersB;
+  }
+
+  function render() {
+    const innings = currentInnings();
+    if (!innings) return;
+    const battingTeam = innings.battingTeamId === match.teamAId ? teamA : teamB;
+    const bowlingTeam = innings.battingTeamId === match.teamAId ? teamB : teamA;
+    $("#matchLabel").textContent = `Match ${match.matchNumber} · Innings ${match.currentInnings}`;
+    $("#battingTeamName").textContent = battingTeam?.name || "Team";
+    $("#bigScore").textContent = `${innings.runs}/${innings.wickets}`;
+    $("#oversLine").textContent = `${ballsToOvers(innings.legalBalls)} / ${match.overs} OVERS`;
+    const crr = innings.legalBalls > 0 ? (innings.runs / (innings.legalBalls / 6)).toFixed(2) : "0.00";
+    let crrText = `CRR ${crr}`;
+    if (match.currentInnings === 2 && match.innings1) {
+      const target = match.innings1.runs + 1;
+      const ballsLeft = match.overs * 6 - innings.legalBalls;
+      const runsNeeded = target - innings.runs;
+      crrText += ` · Need ${Math.max(runsNeeded, 0)} runs from ${Math.max(ballsLeft, 0)} balls`;
+    }
+    $("#crrLine").textContent = crrText;
+
+    const strikerB = innings.batsmen[innings.strikerId];
+    const nonStrikerB = innings.batsmen[innings.nonStrikerId];
+    $("#batsmenMini").innerHTML = `
+      <div class="b-row striker"><span>${playersMap[innings.strikerId]?.name || "—"}</span><span>${strikerB ? `${strikerB.runs} (${strikerB.balls})` : ""}</span></div>
+      <div class="b-row"><span>${playersMap[innings.nonStrikerId]?.name || "—"}</span><span>${nonStrikerB ? `${nonStrikerB.runs} (${nonStrikerB.balls})` : ""}</span></div>`;
+    const bw = innings.bowlers[innings.bowlerId];
+    $("#bowlerMini").textContent = bw ? `${playersMap[innings.bowlerId]?.name || ""}: ${ballsToOvers(bw.balls)}-${bw.maidens}-${bw.runs}-${bw.wickets}` : "";
+
+    $("#lastBalls").innerHTML = innings.lastBalls.slice(0, 8).reverse().map((b) =>
+      `<span class="ball-chip ${b.isWicket ? "w" : b.display === "4" ? "four" : b.display === "6" ? "six" : ""}">${b.display}</span>`
+    ).join("");
+
+    // over-pending check
+    if (lastRenderedLegalBalls !== innings.legalBalls) currentBowlerOverride = null;
+    awaitingBowler = innings.legalBalls > 0 && innings.legalBalls % 6 === 0 && !innings.complete;
+    const stillNeedsBowler = awaitingBowler && !currentBowlerOverride;
+    $("#overPendingBanner").classList.toggle("d-none", !stillNeedsBowler);
+    $("#padWrap").querySelectorAll(".pad-btn:not(.btn-outline-secondary)").forEach((b) => b.disabled = stillNeedsBowler && !b.closest("#overPendingBanner"));
+    if (stillNeedsBowler && lastRenderedLegalBalls !== innings.legalBalls) {
+      populateBowlerModal();
+    }
+    lastRenderedLegalBalls = innings.legalBalls;
+
+    // innings break / complete panels
+    $("#inningsBreakPanel").classList.toggle("d-none", match.status !== "INNINGS_BREAK");
+    $("#completePanel").classList.toggle("d-none", match.status !== "COMPLETED");
+    $("#padWrap").querySelectorAll(".pad-grid, .extra-grid, .pad-btn.wicket, .util-row, #endInningsBtn").forEach((el) => {
+      el.classList.toggle("d-none", match.status === "INNINGS_BREAK" || match.status === "COMPLETED");
+    });
+
+    if (match.status === "INNINGS_BREAK" && match.currentInnings === 1) {
+      const target = match.innings1.runs + 1;
+      $("#targetText").textContent = `Target: ${target} runs from ${match.overs} overs`;
+      const nextBattingXi = innings.battingTeamId === match.teamAId ? playersB : playersA;
+      const nextBowlingXi = innings.battingTeamId === match.teamAId ? playersA : playersB;
+      const opt = (p) => `<option value="${p.id}">#${p.jerseyNumber ?? "-"} ${p.name}</option>`;
+      $("#i2Striker").innerHTML = nextBattingXi.map(opt).join("");
+      $("#i2NonStriker").innerHTML = nextBattingXi.map(opt).join("");
+      $("#i2Bowler").innerHTML = nextBowlingXi.map(opt).join("");
+      if (nextBattingXi[1]) $("#i2NonStriker").value = nextBattingXi[1].id;
+    }
+    if (match.status === "COMPLETED") {
+      $("#resultText").textContent = match.result || "Match complete";
+      $("#viewScorecardLink").href = `scorecard.html?id=${matchId}`;
+    }
+  }
+
+  function populateBowlerModal() {
+    const innings = currentInnings();
+    const bxi = bowlingXi();
+    const opt = (p) => `<option value="${p.id}" ${p.id === innings.bowlerId ? "disabled" : ""}>#${p.jerseyNumber ?? "-"} ${p.name}${p.id === innings.bowlerId ? " (bowled last over)" : ""}</option>`;
+    $("#newBowlerSelect").innerHTML = bxi.map(opt).join("");
+    bowlerModal.show();
+  }
+  $("#confirmBowlerBtn").addEventListener("click", () => {
+    currentBowlerOverride = $("#newBowlerSelect").value;
+    bowlerModal.hide();
+    render();
+  });
+
+  let currentBowlerOverride = null;
+  function activeBowlerId() {
+    const innings = currentInnings();
+    return awaitingBowler ? (currentBowlerOverride || innings.bowlerId) : innings.bowlerId;
+  }
+
+  async function playBall(payload) {
+    if (awaitingBowler && !currentBowlerOverride) { toast("Select the next bowler first", "danger"); return; }
+    const innings = currentInnings();
+    const full = {
+      inningsNumber: match.currentInnings,
+      strikerId: innings.strikerId,
+      nonStrikerId: innings.nonStrikerId,
+      bowlerId: activeBowlerId(),
+      ...payload,
+    };
+    currentBowlerOverride = null;
+    try {
+      await recordBall(matchId, full);
+    } catch (err) {
+      toast(err.message, "danger");
+    }
+  }
+
+  document.querySelectorAll(".pad-grid [data-run]").forEach((btn) => {
+    btn.addEventListener("click", () => playBall({ ballType: "run", runs: parseInt(btn.dataset.run) }));
+  });
+  $("#wideBtn").addEventListener("click", () => playBall({ ballType: "wide", runs: 0 }));
+  $("#noBallBtn").addEventListener("click", () => playBall({ ballType: "noball", runs: 0 }));
+  $("#byeBtn").addEventListener("click", () => playBall({ ballType: "bye", runs: 1 }));
+  $("#legByeBtn").addEventListener("click", () => playBall({ ballType: "legbye", runs: 1 }));
+
+  $("#undoBtn").addEventListener("click", async () => {
+    if (!confirmAction("Undo the last ball?")) return;
+    try { await undoLastBall(matchId, match.currentInnings); } catch (err) { toast(err.message, "danger"); }
+  });
+
+  $("#endInningsBtn").addEventListener("click", async () => {
+    if (!confirmAction("End this innings now?")) return;
+    await forceEndInnings(matchId, match.currentInnings);
+  });
+
+  // ---------- Wicket modal ----------
+  $("#wicketType").addEventListener("change", () => {
+    const isRunOut = $("#wicketType").value === "Run Out";
+    $("#runsCompletedWrap").style.display = isRunOut ? "" : "none";
+  });
+  document.getElementById("wicketModal").addEventListener("show.bs.modal", () => {
+    const innings = currentInnings();
+    const strikerName = playersMap[innings.strikerId]?.name || "Striker";
+    const nonStrikerName = playersMap[innings.nonStrikerId]?.name || "Non-striker";
+    $("#dismissedPlayer").innerHTML = `<option value="${innings.strikerId}">${strikerName} (striker)</option><option value="${innings.nonStrikerId}">${nonStrikerName} (non-striker)</option>`;
+    updateReplacementOptions();
+    $("#wicketType").dispatchEvent(new Event("change"));
+  });
+  function updateReplacementOptions() {
+    const innings = currentInnings();
+    const bxi = battingXi();
+    const usedIds = new Set([...Object.keys(innings.batsmen), innings.strikerId, innings.nonStrikerId].filter(Boolean));
+    const outIds = new Set(Object.entries(innings.batsmen).filter(([, v]) => v.out).map(([k]) => k));
+    const available = bxi.filter((p) => !usedIds.has(p.id) || false).filter((p) => !outIds.has(p.id));
+    // available = players never yet at crease and not out
+    const notYetBatted = bxi.filter((p) => !innings.batsmen[p.id]);
+    $("#replacementPlayer").innerHTML = notYetBatted.map((p) => `<option value="${p.id}">#${p.jerseyNumber ?? "-"} ${p.name}</option>`).join("")
+      || `<option value="">No replacement available (all out)</option>`;
+  }
+  $("#confirmWicketBtn").addEventListener("click", async () => {
+    const wicketType = $("#wicketType").value;
+    const dismissedPlayerId = $("#dismissedPlayer").value;
+    const runs = wicketType === "Run Out" ? (parseInt($("#runsCompleted").value) || 0) : 0;
+    const newBatsmanId = $("#replacementPlayer").value || null;
+    wicketModal.hide();
+    await playBall({ ballType: "wicket", runs, wicketType, dismissedPlayerId, newBatsmanId });
+  });
+
+  // ---------- Edit ball ----------
+  document.getElementById("editModal").addEventListener("show.bs.modal", async () => {
+    const balls = (await getAllBalls(matchId)).filter((b) => b.inningsNumber === match.currentInnings).slice(-15).reverse();
+    $("#editBallList").innerHTML = balls.map((b) => `
+      <div class="list-row">
+        <div class="flex-grow-1 small">
+          <strong>${b.ballType === "wicket" ? "WICKET" : b.ballType === "run" ? b.runs + " run" : b.ballType.toUpperCase()}</strong>
+          — ${playersMap[b.strikerId]?.name || "?"} off ${playersMap[b.bowlerId]?.name || "?"}
+        </div>
+        <input type="number" class="form-control form-control-sm" style="width:70px" value="${b.runs || 0}" id="editRuns_${b.id}">
+        <button class="btn btn-sm btn-pitch save-edit" data-id="${b.id}">Save</button>
+      </div>`).join("") || `<p class="text-muted small">No balls recorded yet.</p>`;
+    document.querySelectorAll(".save-edit").forEach((btn) => btn.addEventListener("click", async () => {
+      const runs = parseInt(document.getElementById(`editRuns_${btn.dataset.id}`).value) || 0;
+      await editBall(matchId, btn.dataset.id, match.currentInnings, { runs });
+      toast("Ball updated", "success");
+      bootstrap.Modal.getInstance(document.getElementById("editModal")).hide();
+    }));
+  });
+
+  // ---------- Second innings ----------
+  $("#startInnings2Btn").addEventListener("click", async () => {
+    const strikerId = $("#i2Striker").value, nonStrikerId = $("#i2NonStriker").value, bowlerId = $("#i2Bowler").value;
+    if (strikerId === nonStrikerId) { toast("Openers must be different players", "danger"); return; }
+    const prevBattingTeamId = match.innings1.battingTeamId;
+    const battingTeamId = prevBattingTeamId === match.teamAId ? match.teamBId : match.teamAId;
+    const bowlingTeamId = prevBattingTeamId;
+    await startInnings(matchId, 2, { strikerId, nonStrikerId, bowlerId, battingTeamId, bowlingTeamId });
+    toast("2nd innings started", "success");
+  });
+
+  // ---------- Live subscription ----------
+  listenMatch(matchId, (m) => {
+    if (!m) return;
+    match = m;
+    render();
+  });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+// ============================================================
+// FIRESTORE SECURITY RULES
+// ------------------------------------------------------------
+// This file is NOT served by GitHub Pages (Firestore rules are not
+// static web assets). Copy its contents into:
+//   Firebase Console -> Firestore Database -> Rules -> paste -> Publish
+// ============================================================
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // ---------- users ----------
+    // A signed-in user can read/create/update ONLY their own profile doc,
+    // and can never self-assign the "admin" role through the app.
+    // Admin accounts are created/edited by the project owner directly in
+    // the Firebase Console (which uses privileged access and is not
+    // subject to these rules).
+    match /users/{uid} {
+      allow read: if isSignedIn() && request.auth.uid == uid;
+      allow create: if isSignedIn() && request.auth.uid == uid &&
+        request.resource.data.role == 'user';
+      allow update: if isSignedIn() && request.auth.uid == uid &&
+        request.resource.data.role == resource.data.role; // can't change own role
+      allow delete: if false;
+    }
+
+    // ---------- public read-only tournament data ----------
+    // Everyone (including signed-out visitors) can read tournament,
+    // team, and player info. Only admins can write.
+    match /tournaments/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /teams/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /players/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ---------- matches + ball-by-ball ----------
+    match /matches/{matchId} {
+      allow read: if true;
+      allow write: if isAdmin();
+
+      match /balls/{ballId} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+    }
+
+    // Deny everything else by default.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

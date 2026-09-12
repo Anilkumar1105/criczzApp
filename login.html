@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Login — Cricket Live</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+<link href="style.css" rel="stylesheet">
+</head>
+<body class="no-bottom-nav">
+
+<div class="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="emoji">🏏</div>
+      <h1>Cricket Live</h1>
+      <p id="authSubtitle">Sign in to follow every ball</p>
+    </div>
+
+    <div id="authError" class="alert alert-danger py-2 small d-none"></div>
+
+    <form id="loginForm">
+      <div class="mb-3 d-none" id="nameField">
+        <label class="form-label">Name</label>
+        <input type="text" class="form-control" id="nameInput" placeholder="Your name">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Email</label>
+        <input type="email" class="form-control" id="emailInput" placeholder="you@example.com" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Password</label>
+        <input type="password" class="form-control" id="passwordInput" placeholder="••••••••" required minlength="6">
+      </div>
+      <button type="submit" class="btn btn-pitch w-100 py-2 fw-semibold" id="submitBtn">Login</button>
+    </form>
+
+    <div class="text-center mt-3">
+      <button class="btn btn-link btn-sm text-decoration-none" id="toggleModeBtn">
+        New here? Create a viewer account
+      </button>
+    </div>
+
+    <p class="text-center text-muted small mt-3 mb-0">
+      Admin accounts are provisioned separately by the tournament organizer.
+    </p>
+  </div>
+</div>
+
+<script type="module">
+  import { loginUser, signupUser, authErrorMessage, onAuthReady } from "./auth.js";
+  import { $ } from "./app.js";
+
+  let mode = "login"; // or "signup"
+
+  onAuthReady((user, profile) => {
+    if (user && profile) {
+      window.location.href = profile.role === "admin" ? "admin.html" : "index.html";
+    }
+  });
+
+  $("#toggleModeBtn").addEventListener("click", () => {
+    mode = mode === "login" ? "signup" : "login";
+    $("#nameField").classList.toggle("d-none", mode === "login");
+    $("#submitBtn").textContent = mode === "login" ? "Login" : "Create account";
+    $("#authSubtitle").textContent = mode === "login" ? "Sign in to follow every ball" : "Create a free viewer account";
+    $("#toggleModeBtn").textContent = mode === "login" ? "New here? Create a viewer account" : "Already have an account? Login";
+    $("#authError").classList.add("d-none");
+  });
+
+  $("#loginForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = $("#emailInput").value.trim();
+    const password = $("#passwordInput").value;
+    const btn = $("#submitBtn");
+    btn.disabled = true;
+    btn.textContent = mode === "login" ? "Logging in…" : "Creating…";
+    $("#authError").classList.add("d-none");
+    try {
+      let profile;
+      if (mode === "login") {
+        profile = await loginUser(email, password);
+      } else {
+        profile = await signupUser($("#nameInput").value.trim(), email, password);
+      }
+      window.location.href = profile.role === "admin" ? "admin.html" : "index.html";
+    } catch (err) {
+      $("#authError").textContent = authErrorMessage(err);
+      $("#authError").classList.remove("d-none");
+      btn.disabled = false;
+      btn.textContent = mode === "login" ? "Login" : "Create account";
+    }
+  });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

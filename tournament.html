@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tournaments — Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+<link href="style.css" rel="stylesheet">
+<link href="admin.css" rel="stylesheet">
+</head>
+<body class="no-bottom-nav" data-page="tournament">
+
+<div class="app-topbar">
+  <div class="d-flex align-items-center gap-2">
+    <button class="btn btn-sm btn-link text-white" data-bs-toggle="offcanvas" data-bs-target="#adminOffcanvas"><i class="bi bi-list fs-4"></i></button>
+    <div class="brand">🏏 <div>Tournaments</div></div>
+  </div>
+  <button class="btn btn-gold btn-sm" data-bs-toggle="modal" data-bs-target="#tModal" id="addBtn"><i class="bi bi-plus-lg"></i> New</button>
+</div>
+
+<div class="offcanvas offcanvas-start" id="adminOffcanvas">
+  <div class="offcanvas-header"><h5>Admin Menu</h5><button class="btn-close" data-bs-dismiss="offcanvas"></button></div>
+  <div class="offcanvas-body d-flex flex-column gap-1" id="adminNavList"></div>
+</div>
+
+<div class="container-app py-3">
+  <div id="list"></div>
+</div>
+
+<div class="modal fade" id="tModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title" id="mTitle">New Tournament</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <form id="form">
+          <input type="hidden" id="tId">
+          <div class="mb-2"><label class="form-label">Tournament name</label><input class="form-control" id="fName" required></div>
+          <div class="mb-2"><label class="form-label">Logo URL</label><input class="form-control" id="fLogo"></div>
+          <div class="mb-2"><label class="form-label">Banner URL</label><input class="form-control" id="fBanner"></div>
+          <div class="mb-2"><label class="form-label">Venue</label><input class="form-control" id="fVenue"></div>
+          <div class="row">
+            <div class="col-6 mb-2"><label class="form-label">Start date</label><input type="date" class="form-control" id="fStart"></div>
+            <div class="col-6 mb-2"><label class="form-label">End date</label><input type="date" class="form-control" id="fEnd"></div>
+          </div>
+          <div class="mb-2"><label class="form-label">Overs per innings</label><input type="number" class="form-control" id="fOvers" value="20" min="1"></div>
+          <div class="mb-2"><label class="form-label">Rules</label><textarea class="form-control" id="fRules" rows="3"></textarea></div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-danger me-auto d-none" id="delBtn">Delete</button>
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-pitch" id="saveBtn">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { requireRole } from "./auth.js";
+  import { renderAdminNav, $, toast, confirmAction, formatDate } from "./app.js";
+  import { listTournaments, createTournament, updateTournament, deleteTournament } from "./tournament.js";
+
+  await requireRole("admin");
+  renderAdminNav("tournament");
+
+  let modal = new bootstrap.Modal("#tModal");
+  let items = [];
+
+  async function refresh() {
+    items = await listTournaments();
+    const list = $("#list");
+    if (!items.length) {
+      list.innerHTML = `<div class="empty-state"><i class="bi bi-trophy"></i>No tournaments yet — tap New to create one</div>`;
+      return;
+    }
+    list.innerHTML = items.map((t) => `
+      <div class="card-app mb-2 d-flex flex-row justify-content-between align-items-center">
+        <div>
+          <div class="fw-semibold">${t.name}</div>
+          <div class="small text-muted">${t.venue || ""} · ${formatDate(t.startDate)} – ${formatDate(t.endDate)} · ${t.oversPerInnings || "-"} overs</div>
+        </div>
+        <button class="btn btn-sm btn-light edit" data-id="${t.id}"><i class="bi bi-pencil"></i></button>
+      </div>`).join("");
+    document.querySelectorAll(".edit").forEach((b) => b.addEventListener("click", () => openEdit(items.find((t) => t.id === b.dataset.id))));
+  }
+
+  function openAdd() {
+    $("#mTitle").textContent = "New Tournament";
+    $("#form").reset();
+    $("#tId").value = "";
+    $("#fOvers").value = 20;
+    $("#delBtn").classList.add("d-none");
+  }
+  function openEdit(t) {
+    $("#mTitle").textContent = "Edit Tournament";
+    $("#tId").value = t.id;
+    $("#fName").value = t.name || "";
+    $("#fLogo").value = t.logoUrl || "";
+    $("#fBanner").value = t.bannerUrl || "";
+    $("#fVenue").value = t.venue || "";
+    $("#fStart").value = t.startDate || "";
+    $("#fEnd").value = t.endDate || "";
+    $("#fOvers").value = t.oversPerInnings || 20;
+    $("#fRules").value = t.rules || "";
+    $("#delBtn").classList.remove("d-none");
+    modal.show();
+  }
+
+  $("#addBtn").addEventListener("click", openAdd);
+  $("#saveBtn").addEventListener("click", async () => {
+    if (!$("#fName").value.trim()) { toast("Name is required", "danger"); return; }
+    const data = {
+      name: $("#fName").value.trim(),
+      logoUrl: $("#fLogo").value.trim(),
+      bannerUrl: $("#fBanner").value.trim(),
+      venue: $("#fVenue").value.trim(),
+      startDate: $("#fStart").value,
+      endDate: $("#fEnd").value,
+      oversPerInnings: parseInt($("#fOvers").value) || 20,
+      rules: $("#fRules").value.trim(),
+    };
+    const id = $("#tId").value;
+    try {
+      if (id) await updateTournament(id, data); else await createTournament(data);
+      toast("Tournament saved", "success");
+      modal.hide();
+      refresh();
+    } catch (err) { toast(err.message, "danger"); }
+  });
+  $("#delBtn").addEventListener("click", async () => {
+    if (!confirmAction("Delete this tournament?")) return;
+    await deleteTournament($("#tId").value);
+    toast("Deleted", "success");
+    modal.hide();
+    refresh();
+  });
+
+  refresh();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

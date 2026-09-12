@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Players — Cricket Live</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+<link href="style.css" rel="stylesheet">
+<link href="admin.css" rel="stylesheet">
+</head>
+<body data-page="players">
+
+<div class="app-topbar">
+  <div class="d-flex align-items-center gap-2">
+    <button class="btn btn-sm btn-link text-white d-none" id="menuBtn" data-bs-toggle="offcanvas" data-bs-target="#adminOffcanvas"><i class="bi bi-list fs-4"></i></button>
+    <button class="btn btn-sm btn-link text-white" onclick="history.back()"><i class="bi bi-arrow-left fs-5"></i></button>
+    <div class="brand">🏏 <div id="pageTitle">Players</div></div>
+  </div>
+  <button class="btn btn-gold btn-sm d-none" id="addPlayerBtn" data-bs-toggle="modal" data-bs-target="#playerModal"><i class="bi bi-plus-lg"></i> Player</button>
+</div>
+
+<div class="offcanvas offcanvas-start" id="adminOffcanvas">
+  <div class="offcanvas-header"><h5>Admin Menu</h5><button class="btn-close" data-bs-dismiss="offcanvas"></button></div>
+  <div class="offcanvas-body d-flex flex-column gap-1" id="adminNavList"></div>
+</div>
+
+<div class="container-app py-3">
+  <div class="mb-3" id="teamFilterWrap">
+    <select class="form-select" id="teamFilter"></select>
+  </div>
+  <div id="playersList"></div>
+</div>
+
+<div id="bottomNav"></div>
+
+<div class="modal fade" id="playerModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title" id="playerModalTitle">Add Player</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <form id="playerForm">
+          <input type="hidden" id="playerId">
+          <div class="mb-2"><label class="form-label">Team</label><select class="form-select" id="playerTeam" required></select></div>
+          <div class="mb-2"><label class="form-label">Player name</label><input class="form-control" id="playerName" required></div>
+          <div class="mb-2"><label class="form-label">Photo URL</label><input class="form-control" id="playerPhotoUrl" placeholder="https://..."></div>
+          <div class="row">
+            <div class="col-6 mb-2"><label class="form-label">Jersey #</label><input type="number" class="form-control" id="playerJersey"></div>
+            <div class="col-6 mb-2"><label class="form-label">Role</label>
+              <select class="form-select" id="playerRole">
+                <option>Batsman</option><option>Bowler</option><option>All-rounder</option><option>Wicket Keeper</option>
+              </select>
+            </div>
+          </div>
+          <div class="mb-2"><label class="form-label">Batting style</label><input class="form-control" id="playerBatStyle" placeholder="Right-hand bat"></div>
+          <div class="mb-2"><label class="form-label">Bowling style</label><input class="form-control" id="playerBowlStyle" placeholder="Right-arm fast"></div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-danger me-auto d-none" id="deletePlayerBtn">Delete</button>
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-pitch" id="savePlayerBtn">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { requireRole } from "./auth.js";
+  import { renderBottomNav, renderAdminNav, $, toast, confirmAction } from "./app.js";
+  import { listTeams, getTeam } from "./teams.js";
+  import { listPlayers, createPlayer, updatePlayer, deletePlayer, playerPhotoImg, PLAYER_ROLES } from "./players.js";
+  import { getDefaultTournament } from "./tournament.js";
+
+  const { profile } = await requireRole("any");
+  const isAdmin = profile.role === "admin";
+  const params = new URLSearchParams(location.search);
+  let currentTeamId = params.get("team") || "";
+
+  if (isAdmin) {
+    renderAdminNav("players");
+    $("#menuBtn").classList.remove("d-none");
+    $("#addPlayerBtn").classList.remove("d-none");
+    document.body.classList.add("no-bottom-nav");
+  } else {
+    renderBottomNav("teams");
+  }
+
+  const tournament = await getDefaultTournament();
+  const teams = await listTeams(tournament?.id);
+  const teamSelect = $("#teamFilter");
+  teamSelect.innerHTML = `<option value="">All teams</option>` + teams.map((t) => `<option value="${t.id}">${t.name}</option>`).join("");
+  teamSelect.value = currentTeamId;
+  const playerTeamSelect = $("#playerTeam");
+  playerTeamSelect.innerHTML = teams.map((t) => `<option value="${t.id}">${t.name}</option>`).join("");
+
+  if (currentTeamId) {
+    const t = await getTeam(currentTeamId);
+    $("#pageTitle").textContent = t ? `${t.name} Squad` : "Players";
+  }
+
+  let modal, players = [];
+
+  async function refresh() {
+    players = await listPlayers(currentTeamId || null);
+    const list = $("#playersList");
+    if (!players.length) {
+      list.innerHTML = `<div class="empty-state"><i class="bi bi-person-x"></i>No players yet${isAdmin ? " — tap + Player to add one" : ""}</div>`;
+      return;
+    }
+    const roleIcon = { "Batsman": "bi-back", "Bowler": "bi-circle", "All-rounder": "bi-arrow-left-right", "Wicket Keeper": "bi-gloves" };
+    list.innerHTML = `<div class="card-app">` + players.map((p) => `
+      <div class="list-row">
+        ${playerPhotoImg(p, "team-logo-sm")}
+        <div class="flex-grow-1">
+          <div class="fw-semibold">#${p.jerseyNumber ?? "-"} ${p.name}</div>
+          <div class="small text-muted">${p.role || ""}${p.battingStyle ? " · " + p.battingStyle : ""}</div>
+        </div>
+        ${isAdmin ? `<div class="admin-row-actions">
+          <button class="btn btn-sm btn-light edit-player" data-id="${p.id}"><i class="bi bi-pencil"></i></button>
+        </div>` : ""}
+      </div>`).join("") + `</div>`;
+
+    document.querySelectorAll(".edit-player").forEach((btn) => btn.addEventListener("click", () => openEdit(players.find((p) => p.id === btn.dataset.id))));
+  }
+
+  teamSelect.addEventListener("change", () => {
+    currentTeamId = teamSelect.value;
+    const url = new URL(location.href);
+    if (currentTeamId) url.searchParams.set("team", currentTeamId); else url.searchParams.delete("team");
+    history.replaceState({}, "", url);
+    refresh();
+  });
+
+  function openAdd() {
+    $("#playerModalTitle").textContent = "Add Player";
+    $("#playerForm").reset();
+    $("#playerId").value = "";
+    if (currentTeamId) playerTeamSelect.value = currentTeamId;
+    $("#deletePlayerBtn").classList.add("d-none");
+  }
+  function openEdit(p) {
+    $("#playerModalTitle").textContent = "Edit Player";
+    $("#playerId").value = p.id;
+    playerTeamSelect.value = p.teamId || "";
+    $("#playerName").value = p.name || "";
+    $("#playerPhotoUrl").value = p.photoUrl || "";
+    $("#playerJersey").value = p.jerseyNumber ?? "";
+    $("#playerRole").value = p.role || "Batsman";
+    $("#playerBatStyle").value = p.battingStyle || "";
+    $("#playerBowlStyle").value = p.bowlingStyle || "";
+    $("#deletePlayerBtn").classList.remove("d-none");
+    modal.show();
+  }
+
+  if (isAdmin) {
+    modal = new bootstrap.Modal("#playerModal");
+    $("#addPlayerBtn").addEventListener("click", openAdd);
+    $("#savePlayerBtn").addEventListener("click", async () => {
+      if (!$("#playerName").value.trim() || !playerTeamSelect.value) { toast("Name and team are required", "danger"); return; }
+      const data = {
+        teamId: playerTeamSelect.value,
+        name: $("#playerName").value.trim(),
+        photoUrl: $("#playerPhotoUrl").value.trim(),
+        jerseyNumber: parseInt($("#playerJersey").value) || null,
+        role: $("#playerRole").value,
+        battingStyle: $("#playerBatStyle").value.trim(),
+        bowlingStyle: $("#playerBowlStyle").value.trim(),
+      };
+      const id = $("#playerId").value;
+      try {
+        if (id) await updatePlayer(id, data); else await createPlayer(data);
+        toast("Player saved", "success");
+        modal.hide();
+        refresh();
+      } catch (err) { toast(err.message, "danger"); }
+    });
+    $("#deletePlayerBtn").addEventListener("click", async () => {
+      if (!confirmAction("Delete this player?")) return;
+      await deletePlayer($("#playerId").value);
+      toast("Player deleted", "success");
+      modal.hide();
+      refresh();
+    });
+  }
+
+  refresh();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

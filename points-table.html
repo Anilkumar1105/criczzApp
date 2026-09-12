@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Points Table — Cricket Live</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+<link href="style.css" rel="stylesheet">
+<link href="admin.css" rel="stylesheet">
+</head>
+<body data-page="points">
+
+<div class="app-topbar">
+  <div class="d-flex align-items-center gap-2">
+    <button class="btn btn-sm btn-link text-white d-none" id="menuBtn" data-bs-toggle="offcanvas" data-bs-target="#adminOffcanvas"><i class="bi bi-list fs-4"></i></button>
+    <div class="brand">🏏 <div>Points Table</div></div>
+  </div>
+</div>
+
+<div class="offcanvas offcanvas-start" id="adminOffcanvas">
+  <div class="offcanvas-header"><h5>Admin Menu</h5><button class="btn-close" data-bs-dismiss="offcanvas"></button></div>
+  <div class="offcanvas-body d-flex flex-column gap-1" id="adminNavList"></div>
+</div>
+
+<div class="container-app py-3">
+  <div class="card-app">
+    <div class="table-responsive">
+      <table class="table points-table mb-0">
+        <thead>
+          <tr><th>#</th><th>Team</th><th class="text-end">P</th><th class="text-end">W</th><th class="text-end">L</th><th class="text-end">NR</th><th class="text-end">Pts</th><th class="text-end">NRR</th></tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div id="bottomNav"></div>
+
+<script type="module">
+  import { requireRole } from "./auth.js";
+  import { renderBottomNav, renderAdminNav, $ } from "./app.js";
+  import { computeStandings } from "./points.js";
+  import { teamLogoImg } from "./teams.js";
+  import { getDefaultTournament } from "./tournament.js";
+
+  const { profile } = await requireRole("any");
+  if (profile.role === "admin") {
+    renderAdminNav("points");
+    $("#menuBtn").classList.remove("d-none");
+    document.body.classList.add("no-bottom-nav");
+  } else {
+    renderBottomNav("points");
+  }
+
+  const tournament = await getDefaultTournament();
+  const standings = await computeStandings(tournament?.id);
+
+  const rows = $("#rows");
+  if (!standings.length) {
+    rows.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4">No completed matches yet</td></tr>`;
+  } else {
+    rows.innerHTML = standings.map((r, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td class="d-flex align-items-center gap-2">${teamLogoImg(r, "team-logo-sm")}<span class="fw-semibold">${r.shortName || r.name}</span></td>
+        <td class="text-end">${r.played}</td>
+        <td class="text-end">${r.won}</td>
+        <td class="text-end">${r.lost}</td>
+        <td class="text-end">${r.noResult}</td>
+        <td class="text-end fw-bold">${r.points}</td>
+        <td class="text-end">${r.nrr >= 0 ? "+" : ""}${r.nrr.toFixed(3)}</td>
+      </tr>`).join("");
+  }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

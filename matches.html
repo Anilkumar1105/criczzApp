@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Matches — Cricket Live</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+<link href="style.css" rel="stylesheet">
+<link href="admin.css" rel="stylesheet">
+</head>
+<body data-page="matches">
+
+<div class="app-topbar">
+  <div class="d-flex align-items-center gap-2">
+    <button class="btn btn-sm btn-link text-white d-none" id="menuBtn" data-bs-toggle="offcanvas" data-bs-target="#adminOffcanvas"><i class="bi bi-list fs-4"></i></button>
+    <div class="brand">🏏 <div>Matches</div></div>
+  </div>
+  <button class="btn btn-gold btn-sm d-none" id="addMatchBtn" data-bs-toggle="modal" data-bs-target="#matchModal"><i class="bi bi-plus-lg"></i> Match</button>
+</div>
+
+<div class="offcanvas offcanvas-start" id="adminOffcanvas">
+  <div class="offcanvas-header"><h5>Admin Menu</h5><button class="btn-close" data-bs-dismiss="offcanvas"></button></div>
+  <div class="offcanvas-body d-flex flex-column gap-1" id="adminNavList"></div>
+</div>
+
+<div class="container-app py-3">
+  <div id="list"></div>
+</div>
+
+<div id="bottomNav"></div>
+
+<!-- Create/edit match modal -->
+<div class="modal fade" id="matchModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title" id="mmTitle">New Match</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <form id="matchForm">
+          <input type="hidden" id="matchId">
+          <div class="mb-2"><label class="form-label">Match number</label><input type="number" class="form-control" id="fNum" required></div>
+          <div class="mb-2"><label class="form-label">Team A</label><select class="form-select" id="fTeamA" required></select></div>
+          <div class="mb-2"><label class="form-label">Team B</label><select class="form-select" id="fTeamB" required></select></div>
+          <div class="row">
+            <div class="col-6 mb-2"><label class="form-label">Date</label><input type="date" class="form-control" id="fDate"></div>
+            <div class="col-6 mb-2"><label class="form-label">Time</label><input type="time" class="form-control" id="fTime"></div>
+          </div>
+          <div class="mb-2"><label class="form-label">Venue</label><input class="form-control" id="fVenue"></div>
+          <div class="mb-2"><label class="form-label">Overs</label><input type="number" class="form-control" id="fOvers" value="20"></div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-danger me-auto d-none" id="delMatchBtn">Delete</button>
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-pitch" id="saveMatchBtn">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Playing XI modal -->
+<div class="modal fade" id="xiModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">Select Playing XI</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <ul class="nav nav-tabs mb-3" role="tablist">
+          <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#xiA">Team A</button></li>
+          <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#xiB">Team B</button></li>
+        </ul>
+        <div class="tab-content">
+          <div class="tab-pane fade show active" id="xiA"></div>
+          <div class="tab-pane fade" id="xiB"></div>
+        </div>
+      </div>
+      <div class="modal-footer flex-wrap">
+        <span class="me-auto small text-muted w-100" id="xiCount"></span>
+        <input type="datetime-local" class="form-control form-control-sm w-auto" id="announceTimeInput">
+        <button class="btn btn-sm btn-outline-secondary" id="setAnnounceTimeBtn">Set announce time</button>
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button class="btn btn-pitch" id="saveXiBtn">Save Playing XI</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toss / start match modal -->
+<div class="modal fade" id="startModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">Start Match</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <div class="mb-2"><label class="form-label">Toss won by</label><select class="form-select" id="tossWinner"></select></div>
+        <div class="mb-2"><label class="form-label">Elected to</label>
+          <select class="form-select" id="tossDecision"><option value="bat">Bat</option><option value="bowl">Bowl</option></select>
+        </div>
+        <div class="mb-2"><label class="form-label">Opening striker</label><select class="form-select" id="openStriker"></select></div>
+        <div class="mb-2"><label class="form-label">Opening non-striker</label><select class="form-select" id="openNonStriker"></select></div>
+        <div class="mb-2"><label class="form-label">Opening bowler</label><select class="form-select" id="openBowler"></select></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-ball" id="confirmStartBtn">Start Match</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { requireRole } from "./auth.js";
+  import { renderBottomNav, renderAdminNav, $, toast, confirmAction, statusBadge, formatDateTime } from "./app.js";
+  import { listTeams, teamLogoImg } from "./teams.js";
+  import { listPlayers, playerPhotoImg } from "./players.js";
+  import { listMatches, createMatch, updateMatch, deleteMatch, setPlayingXI, setPlayingXIAnnounceTime, announcePlayingXI, setToss } from "./matches.js";
+  import { startInnings } from "./scoring.js";
+  import { getDefaultTournament } from "./tournament.js";
+
+  const { profile } = await requireRole("any");
+  const isAdmin = profile.role === "admin";
+  if (isAdmin) {
+    renderAdminNav("matches");
+    $("#menuBtn").classList.remove("d-none");
+    $("#addMatchBtn").classList.remove("d-none");
+    document.body.classList.add("no-bottom-nav");
+  } else {
+    renderBottomNav("matches");
+  }
+
+  const tournament = await getDefaultTournament();
+  const teams = await listTeams(tournament?.id);
+  const teamMap = Object.fromEntries(teams.map((t) => [t.id, t]));
+  $("#fTeamA").innerHTML = teams.map((t) => `<option value="${t.id}">${t.name}</option>`).join("");
+  $("#fTeamB").innerHTML = teams.map((t) => `<option value="${t.id}">${t.name}</option>`).join("");
+
+  let matches = [];
+  let matchModal, xiModal, startModal;
+  if (isAdmin) {
+    matchModal = new bootstrap.Modal("#matchModal");
+    xiModal = new bootstrap.Modal("#xiModal");
+    startModal = new bootstrap.Modal("#startModal");
+  }
+
+  function actionsFor(m) {
+    const viewLink = (m.status === "COMPLETED") ? `scorecard.html?id=${m.id}` : `live-score.html?id=${m.id}`;
+    const viewLabel = (m.status === "COMPLETED") ? "Scorecard" : (m.status === "UPCOMING" ? "Details" : "View");
+    let adminBtns = "";
+    if (isAdmin) {
+      if (m.status === "UPCOMING") {
+        adminBtns = `<button class="btn btn-sm btn-pitch xi-btn" data-id="${m.id}">Select Playing XI</button>
+                     <button class="btn btn-sm btn-light edit-btn" data-id="${m.id}"><i class="bi bi-pencil"></i></button>`;
+      } else if (m.status === "PLAYING_XI") {
+        adminBtns = `${!m.playingXIAnnounced ? `<button class="btn btn-sm btn-gold announce-btn" data-id="${m.id}">Announce XI</button>` : ""}
+                     <button class="btn btn-sm btn-ball start-btn" data-id="${m.id}">Start Match</button>
+                     <button class="btn btn-sm btn-light xi-btn" data-id="${m.id}"><i class="bi bi-pencil"></i></button>`;
+      } else if (m.status === "LIVE" || m.status === "INNINGS_BREAK") {
+        adminBtns = `<a class="btn btn-sm btn-ball" href="scoring.html?id=${m.id}"><i class="bi bi-broadcast"></i> Score</a>`;
+      }
+    }
+    return `<div class="d-flex gap-2 flex-wrap mt-2">
+      <a class="btn btn-sm btn-outline-secondary" href="${viewLink}">${viewLabel}</a>
+      ${adminBtns}
+    </div>`;
+  }
+
+  async function refresh() {
+    matches = await listMatches(tournament?.id);
+    const list = $("#list");
+    if (!matches.length) {
+      list.innerHTML = `<div class="empty-state"><i class="bi bi-calendar2-x"></i>No matches yet${isAdmin ? " — tap + Match to create one" : ""}</div>`;
+      return;
+    }
+    list.innerHTML = matches.map((m) => {
+      const teamA = teamMap[m.teamAId], teamB = teamMap[m.teamBId];
+      return `<div class="card-app mb-2">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="small text-muted">Match ${m.matchNumber ?? ""} · ${formatDateTime(m.date ? `${m.date}T${m.time || "00:00"}` : null)}</span>
+          ${statusBadge(m.status)}
+        </div>
+        <div class="d-flex align-items-center justify-content-between">
+          <div class="d-flex align-items-center gap-2">${teamLogoImg(teamA, "team-logo-sm")}<span class="small fw-semibold">${teamA?.name || "TBD"}</span></div>
+          <span class="small text-muted">vs</span>
+          <div class="d-flex align-items-center gap-2"><span class="small fw-semibold">${teamB?.name || "TBD"}</span>${teamLogoImg(teamB, "team-logo-sm")}</div>
+        </div>
+        <div class="small text-muted mt-1"><i class="bi bi-geo-alt"></i> ${m.venue || "Venue TBD"}</div>
+        ${actionsFor(m)}
+      </div>`;
+    }).join("");
+
+    document.querySelectorAll(".edit-btn").forEach((b) => b.addEventListener("click", () => openEditMatch(matches.find((m) => m.id === b.dataset.id))));
+    document.querySelectorAll(".xi-btn").forEach((b) => b.addEventListener("click", () => openXi(matches.find((m) => m.id === b.dataset.id))));
+    document.querySelectorAll(".announce-btn").forEach((b) => b.addEventListener("click", async () => {
+      await announcePlayingXI(b.dataset.id);
+      toast("Playing XI announced", "success");
+      refresh();
+    }));
+    document.querySelectorAll(".start-btn").forEach((b) => b.addEventListener("click", () => openStart(matches.find((m) => m.id === b.dataset.id))));
+  }
+
+  // ---------- Create / edit match ----------
+  function openAddMatch() {
+    $("#mmTitle").textContent = "New Match";
+    $("#matchForm").reset();
+    $("#matchId").value = "";
+    $("#fOvers").value = tournament?.oversPerInnings || 20;
+    $("#delMatchBtn").classList.add("d-none");
+  }
+  function openEditMatch(m) {
+    $("#mmTitle").textContent = "Edit Match";
+    $("#matchId").value = m.id;
+    $("#fNum").value = m.matchNumber || "";
+    $("#fTeamA").value = m.teamAId || "";
+    $("#fTeamB").value = m.teamBId || "";
+    $("#fDate").value = m.date || "";
+    $("#fTime").value = m.time || "";
+    $("#fVenue").value = m.venue || "";
+    $("#fOvers").value = m.overs || 20;
+    $("#delMatchBtn").classList.remove("d-none");
+    matchModal.show();
+  }
+  if (isAdmin) {
+    $("#addMatchBtn").addEventListener("click", openAddMatch);
+    $("#saveMatchBtn").addEventListener("click", async () => {
+      if ($("#fTeamA").value === $("#fTeamB").value) { toast("Team A and Team B must differ", "danger"); return; }
+      const data = {
+        tournamentId: tournament?.id || null,
+        matchNumber: parseInt($("#fNum").value) || 0,
+        teamAId: $("#fTeamA").value,
+        teamBId: $("#fTeamB").value,
+        date: $("#fDate").value,
+        time: $("#fTime").value,
+        venue: $("#fVenue").value.trim(),
+        overs: parseInt($("#fOvers").value) || 20,
+      };
+      const id = $("#matchId").value;
+      try {
+        if (id) await updateMatch(id, data); else await createMatch(data);
+        toast("Match saved", "success");
+        matchModal.hide();
+        refresh();
+      } catch (err) { toast(err.message, "danger"); }
+    });
+    $("#delMatchBtn").addEventListener("click", async () => {
+      if (!confirmAction("Delete this match?")) return;
+      await deleteMatch($("#matchId").value);
+      toast("Deleted", "success");
+      matchModal.hide();
+      refresh();
+    });
+  }
+
+  // ---------- Playing XI ----------
+  let xiState = {};
+  async function openXi(m) {
+    xiState = { matchId: m.id, teamAId: m.teamAId, teamBId: m.teamBId, [m.teamAId]: [...(m.playingXI?.[m.teamAId] || [])], [m.teamBId]: [...(m.playingXI?.[m.teamBId] || [])] };
+    const [playersA, playersB] = await Promise.all([listPlayers(m.teamAId), listPlayers(m.teamBId)]);
+    renderXiTab("xiA", m.teamAId, playersA);
+    renderXiTab("xiB", m.teamBId, playersB);
+    updateXiCount();
+    xiModal.show();
+  }
+  function renderXiTab(mountId, teamId, players) {
+    $(`#${mountId}`).innerHTML = players.map((p) => `
+      <div class="xi-picker-item ${xiState[teamId]?.includes(p.id) ? "selected" : ""}" data-team="${teamId}" data-player="${p.id}">
+        <span class="order-num"></span>
+        ${playerPhotoImg(p, "team-logo-sm")}
+        <span class="flex-grow-1">#${p.jerseyNumber ?? "-"} ${p.name} <span class="text-muted small">(${p.role || ""})</span></span>
+      </div>`).join("") || `<p class="text-muted small">No players in this team yet — add players first.</p>`;
+    $(`#${mountId}`).querySelectorAll(".xi-picker-item").forEach((el) => el.addEventListener("click", () => toggleXi(el)));
+    refreshOrderNumbers(teamId);
+  }
+  function toggleXi(el) {
+    const teamId = el.dataset.team, playerId = el.dataset.player;
+    xiState[teamId] = xiState[teamId] || [];
+    const idx = xiState[teamId].indexOf(playerId);
+    if (idx >= 0) {
+      xiState[teamId].splice(idx, 1);
+    } else {
+      if (xiState[teamId].length >= 11) { toast("Playing XI is already 11 players", "danger"); return; }
+      xiState[teamId].push(playerId);
+    }
+    el.classList.toggle("selected");
+    refreshOrderNumbers(teamId);
+    updateXiCount();
+  }
+  function refreshOrderNumbers(teamId) {
+    document.querySelectorAll(`.xi-picker-item[data-team="${teamId}"]`).forEach((el) => {
+      const idx = xiState[teamId]?.indexOf(el.dataset.player);
+      el.querySelector(".order-num").textContent = idx >= 0 ? idx + 1 : "";
+    });
+  }
+  function updateXiCount() {
+    $("#xiCount").textContent = `Team A: ${xiState[xiState.teamAId]?.length || 0}/11 · Team B: ${xiState[xiState.teamBId]?.length || 0}/11`;
+  }
+  if (isAdmin) {
+    $("#setAnnounceTimeBtn").addEventListener("click", async () => {
+      const val = $("#announceTimeInput").value;
+      if (!val) { toast("Pick a date/time first", "danger"); return; }
+      await setPlayingXIAnnounceTime(xiState.matchId, val);
+      toast("Announce time set", "success");
+    });
+    $("#saveXiBtn").addEventListener("click", async () => {
+      const aLen = xiState[xiState.teamAId]?.length || 0, bLen = xiState[xiState.teamBId]?.length || 0;
+      if (aLen !== 11 || bLen !== 11) { toast("Both teams need exactly 11 players selected", "danger"); return; }
+      await setPlayingXI(xiState.matchId, xiState.teamAId, xiState[xiState.teamAId]);
+      await setPlayingXI(xiState.matchId, xiState.teamBId, xiState[xiState.teamBId]);
+      toast("Playing XI saved", "success");
+      xiModal.hide();
+      refresh();
+    });
+  }
+
+  // ---------- Start match (toss + openers) ----------
+  let startState = {};
+  async function openStart(m) {
+    startState = { matchId: m.id, teamAId: m.teamAId, teamBId: m.teamBId };
+    const teamA = teamMap[m.teamAId], teamB = teamMap[m.teamBId];
+    $("#tossWinner").innerHTML = `<option value="${m.teamAId}">${teamA?.name}</option><option value="${m.teamBId}">${teamB?.name}</option>`;
+    const [playersA, playersB] = await Promise.all([listPlayers(m.teamAId), listPlayers(m.teamBId)]);
+    const xiA = playersA.filter((p) => (m.playingXI?.[m.teamAId] || []).includes(p.id));
+    const xiB = playersB.filter((p) => (m.playingXI?.[m.teamBId] || []).includes(p.id));
+    startState.xiA = xiA; startState.xiB = xiB;
+    updateOpenerOptions();
+    $("#tossWinner").onchange = updateOpenerOptions;
+    $("#tossDecision").onchange = updateOpenerOptions;
+    startModal.show();
+  }
+  function updateOpenerOptions() {
+    const winner = $("#tossWinner").value;
+    const decision = $("#tossDecision").value;
+    const battingFirstTeamId = decision === "bat" ? winner : (winner === startState.teamAId ? startState.teamBId : startState.teamAId);
+    const battingXi = battingFirstTeamId === startState.teamAId ? startState.xiA : startState.xiB;
+    const bowlingXi = battingFirstTeamId === startState.teamAId ? startState.xiB : startState.xiA;
+    startState.battingFirstTeamId = battingFirstTeamId;
+    startState.bowlingFirstTeamId = battingFirstTeamId === startState.teamAId ? startState.teamBId : startState.teamAId;
+    const opt = (p) => `<option value="${p.id}">#${p.jerseyNumber ?? "-"} ${p.name}</option>`;
+    $("#openStriker").innerHTML = battingXi.map(opt).join("");
+    $("#openNonStriker").innerHTML = battingXi.map(opt).join("");
+    $("#openBowler").innerHTML = bowlingXi.map(opt).join("");
+    if (battingXi[1]) $("#openNonStriker").value = battingXi[1].id;
+  }
+  if (isAdmin) {
+    $("#confirmStartBtn").addEventListener("click", async () => {
+      const strikerId = $("#openStriker").value, nonStrikerId = $("#openNonStriker").value, bowlerId = $("#openBowler").value;
+      if (strikerId === nonStrikerId) { toast("Striker and non-striker must be different players", "danger"); return; }
+      await setToss(startState.matchId, $("#tossWinner").value, $("#tossDecision").value);
+      await startInnings(startState.matchId, 1, {
+        strikerId, nonStrikerId, bowlerId,
+        battingTeamId: startState.battingFirstTeamId,
+        bowlingTeamId: startState.bowlingFirstTeamId,
+      });
+      toast("Match started!", "success");
+      startModal.hide();
+      window.location.href = `scoring.html?id=${startState.matchId}`;
+    });
+  }
+
+  refresh();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
