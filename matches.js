@@ -5,7 +5,7 @@
 import { db } from "./firebase-config.js";
 import {
   collection, doc, addDoc, updateDoc, deleteDoc, getDoc, getDocs,
-  query, where, orderBy, onSnapshot, serverTimestamp,
+  query, where, orderBy, onSnapshot, serverTimestamp, writeBatch,
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 const matchesCol = collection(db, "matches");
@@ -45,8 +45,24 @@ export async function updateMatch(id, data) {
   return updateDoc(doc(db, "matches", id), data);
 }
 
+/**
+ * Delete a match AND every ball-by-ball event stored under it
+ * (matches/{id}/balls/*). Firestore does not cascade-delete
+ * subcollections automatically, so without this the ball log — and
+ * therefore the match's live/final score data — would be orphaned
+ * in the database forever even after the match "disappears" from
+ * the app.
+ */
 export async function deleteMatch(id) {
-  return deleteDoc(doc(db, "matches", id));
+  const ballsSnap = await getDocs(collection(db, "matches", id, "balls"));
+  const ballDocs = ballsSnap.docs;
+  const CHUNK = 400; // stay under Firestore's 500-writes-per-batch limit
+  for (let i = 0; i < ballDocs.length; i += CHUNK) {
+    const batch = writeBatch(db);
+    ballDocs.slice(i, i + CHUNK).forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+  }
+  await deleteDoc(doc(db, "matches", id));
 }
 
 export function listenMatch(id, callback) {
